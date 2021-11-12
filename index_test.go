@@ -58,3 +58,39 @@ func TestIndexDocument(t *testing.T) {
 	}
 }
 
+func TestGetPostingsList(t *testing.T) {
+	tests := []struct {
+		name  string
+		dict  map[string][]int
+		token string
+		res   []int
+		err   error
+	}{
+		{
+			name: "not ok, token not found in dict",
+			dict: map[string][]int{
+				"other": {1},
+			},
+			token: "x",
+			err:   errTokenNotFound("x"),
+		},
+		{
+			name: "ok",
+			dict: map[string][]int{
+				"x": {1},
+			},
+			token: "x",
+			res:   []int{1},
+		},
+	}
+
+	for _, tt := range tests {
+		idx := &index{
+			dict: tt.dict,
+		}
+
+		res, err := idx.GetPostingsList(tt.token)
+		require.Equal(t, tt.err, err)
+		require.Equal(t, tt.res, res)
+	}
+}
