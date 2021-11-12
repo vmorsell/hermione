@@ -16,7 +16,9 @@ type index struct {
 }
 
 func NewIndex() Index {
-	return &index{}
+	return &index{
+		dict: make(map[string][]int),
+	}
 }
 
 // nextDocID returns the next available document ID.
