@@ -28,11 +28,9 @@ func (q *querier) Intersect(tokens ...string) ([]int, error) {
 		// Start with the full first postings list.
 		if res == nil {
 			res = postings
-			fmt.Println(res)
 			continue
 		}
 		res = intersect(res, postings)
-		fmt.Println(res)
 	}
 	return res, nil
 }
