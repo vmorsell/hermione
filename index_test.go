@@ -72,7 +72,7 @@ func TestGetPostingsList(t *testing.T) {
 				"other": {1},
 			},
 			token: "x",
-			err:   errTokenNotFound("x"),
+			err:   errTokenNotInIndex("x"),
 		},
 		{
 			name: "ok",
@@ -89,7 +89,7 @@ func TestGetPostingsList(t *testing.T) {
 			dict: tt.dict,
 		}
 
-		res, err := idx.GetPostingsList(tt.token)
+		res, err := idx.Postings(tt.token)
 		require.Equal(t, tt.err, err)
 		require.Equal(t, tt.res, res)
 	}
