@@ -72,7 +72,7 @@ func TestGetPostingsList(t *testing.T) {
 				"other": {1},
 			},
 			token: "x",
-			err:   errTokenNotFound("x"),
+			err:   errTokenNotInIndex("x"),
 		},
 		{
 			name: "ok",

@@ -45,12 +45,12 @@ func (idx *index) IndexDocument(r io.Reader) error {
 	return nil
 }
 
-var errTokenNotFound = func(token string) error { return fmt.Errorf("token '%s' not found in index", token) }
+var errTokenNotInIndex = func(token string) error { return fmt.Errorf("token '%s' not found in index", token) }
 
 // Postings returns the full postings list for the given token.
 func (idx *index) Postings(token string) ([]int, error) {
 	if _, ok := idx.dict[token]; !ok {
-		return nil, errTokenNotFound(token)
+		return nil, errTokenNotInIndex(token)
 	}
 	return idx.dict[token], nil
 }
