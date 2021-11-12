@@ -7,6 +7,7 @@ import (
 
 type Index interface {
 	IndexDocument(r io.Reader) error
+	Postings(token string) ([]int, error)
 }
 
 type index struct {
@@ -46,7 +47,7 @@ func (idx *index) IndexDocument(r io.Reader) error {
 
 var errTokenNotFound = func(token string) error { return fmt.Errorf("token '%s' not found in index", token) }
 
-func (idx *index) GetPostingsList(token string) ([]int, error) {
+func (idx *index) Postings(token string) ([]int, error) {
 	if _, ok := idx.dict[token]; !ok {
 		return nil, errTokenNotFound(token)
 	}
