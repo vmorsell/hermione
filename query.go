@@ -41,7 +41,7 @@ func intersect(a, b []int) []int {
 		return nil
 	}
 
-	res := []int{}
+	var res []int
 
 	aCur := 0
 	bCur := 0
