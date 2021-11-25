@@ -10,7 +10,7 @@ import (
 func main() {
 	idx := NewIndex()
 	querier := NewQuerier(idx)
-	store, err := NewStore("./docs")
+	store, err := NewStore("./store")
 	if err != nil {
 		log.Fatalf("new store: %v", err)
 	}
