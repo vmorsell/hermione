@@ -7,60 +7,72 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntersectExported(t *testing.T) {
+	type intersectCall struct {
+		a, b []int
+	}
+
 	tests := []struct {
 		name   string
-		q      *querier
+		dict   map[string][]int
 		tokens []string
-		res    []int
+		calls  []intersectCall
 		err    error
 	}{
 		{
+			name: "not ok - no tokens provided",
+			err:  fmt.Errorf("no tokens provided"),
+		},
+		{
 			name: "not ok - token not found",
-			q: &querier{
-				idx: &index{
-					dict: map[string][]int{
-						"a": {0},
-					},
-				},
+			dict: map[string][]int{
+				"a": {0},
 			},
 			tokens: []string{"a", "b"},
 			err:    fmt.Errorf("get postings list: %w", errTokenNotInIndex("b")),
 		},
 		{
 			name: "ok - two tokens",
-			q: &querier{
-				idx: &index{
-					dict: map[string][]int{
-						"a": {0, 1, 10, 100},
-						"b": {1},
-						"c": {1, 10, 100},
-					},
-				},
+			dict: map[string][]int{
+				"a": {0, 1, 2},
+				"b": {1, 3},
 			},
-			tokens: []string{"a", "c"},
-			res:    []int{1, 10, 100},
+			tokens: []string{"a", "b"},
+			calls: []intersectCall{
+				{a: []int{1, 3}, b: []int{0, 1, 2}},
+			},
 		},
 		{
 			name: "ok - three tokens",
-			q: &querier{
-				idx: &index{
-					dict: map[string][]int{
-						"a": {0, 1, 10, 100},
-						"b": {1},
-						"c": {1, 10, 100},
-					},
-				},
+			dict: map[string][]int{
+				"a": {0, 1, 2},
+				"b": {1, 3},
+				"c": {1},
 			},
 			tokens: []string{"a", "b", "c"},
-			res:    []int{1},
+			calls: []intersectCall{
+				{a: []int{1}, b: []int{0, 1, 2}}, // We expect it to start with the shortest list as 'a' param.
+				{a: []int{1}, b: []int{1, 3}},
+			},
 		},
 	}
 
 	for _, tt := range tests {
-		res, err := tt.q.Intersect(tt.tokens...)
-		require.Equal(t, tt.err, err)
-		require.Equal(t, tt.res, res)
+		t.Run(tt.name, func(t *testing.T) {
+			idx := NewIndex().(*index)
+			idx.dict = tt.dict
+
+			q := NewQuerier(idx).(*querier)
+
+			var calls []intersectCall
+			q.intersectFn = func(a, b []int) []int {
+				calls = append(calls, intersectCall{a, b})
+				return intersect(a, b)
+			}
+
+			_, err := q.Intersect(tt.tokens...)
+			require.Equal(t, tt.err, err)
+			require.Equal(t, tt.calls, calls)
+		})
 	}
 }
 

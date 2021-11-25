@@ -8,11 +8,16 @@ type Querier interface {
 
 type querier struct {
 	idx Index
+
+	intersectFn func(a, b []int) []int
 }
 
 func NewQuerier(idx Index) Querier {
 	return &querier{
 		idx: idx,
+
+		// Use the default functions
+		intersectFn: intersect,
 	}
 }
 
@@ -47,7 +52,7 @@ func (q *querier) Intersect(tokens ...string) ([]int, error) {
 			continue
 		}
 
-		res = intersect(res, l)
+		res = q.intersectFn(res, l)
 	}
 	return res, nil
 }
