@@ -1,4 +1,4 @@
-module github.com/vmorsell/ross
+module github.com/vmorsell/hermione
 
 go 1.17
 
