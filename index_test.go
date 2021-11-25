@@ -50,12 +50,14 @@ func TestIndexDocument(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		idx := NewIndex().(*index)
-		idx.dict = tt.dict
-		idx.docIDCounter = tt.docIDCounter
+		t.Run(tt.name, func(t *testing.T) {
+			idx := NewIndex().(*index)
+			idx.dict = tt.dict
+			idx.docIDCounter = tt.docIDCounter
 
-		idx.IndexDocument(tt.r)
-		require.EqualValues(t, tt.wantDict, idx.dict)
+			idx.IndexDocument(tt.r)
+			require.EqualValues(t, tt.wantDict, idx.dict)
+		})
 	}
 }
 
@@ -86,11 +88,13 @@ func TestGetPostingsList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		idx := NewIndex().(*index)
-		idx.dict = tt.dict
+		t.Run(tt.name, func(t *testing.T) {
+			idx := NewIndex().(*index)
+			idx.dict = tt.dict
 
-		res, err := idx.Postings(tt.token)
-		require.Equal(t, tt.err, err)
-		require.Equal(t, tt.res, res)
+			res, err := idx.Postings(tt.token)
+			require.Equal(t, tt.err, err)
+			require.Equal(t, tt.res, res)
+		})
 	}
 }

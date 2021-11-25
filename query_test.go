@@ -105,7 +105,9 @@ func TestPrivateIntersect(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		res := intersect(tt.a, tt.b)
-		require.Equal(t, tt.res, res)
+		t.Run(tt.name, func(t *testing.T) {
+			res := intersect(tt.a, tt.b)
+			require.Equal(t, tt.res, res)
+		})
 	}
 }
