@@ -9,12 +9,12 @@ import (
 
 func TestIntersect(t *testing.T) {
 	type intersectCall struct {
-		a, b []int
+		a, b []string
 	}
 
 	tests := []struct {
 		name   string
-		dict   map[string][]int
+		dict   map[string][]string
 		tokens []string
 		calls  []intersectCall
 		err    error
@@ -25,34 +25,34 @@ func TestIntersect(t *testing.T) {
 		},
 		{
 			name: "not ok - token not found",
-			dict: map[string][]int{
-				"a": {0},
+			dict: map[string][]string{
+				"x": {"a"},
 			},
-			tokens: []string{"a", "b"},
-			err:    fmt.Errorf("get postings list: %w", errTokenNotInIndex("b")),
+			tokens: []string{"x", "y"},
+			err:    fmt.Errorf("get postings list: %w", errTokenNotInIndex("y")),
 		},
 		{
 			name: "ok - two tokens",
-			dict: map[string][]int{
-				"a": {0, 1, 2},
-				"b": {1, 3},
+			dict: map[string][]string{
+				"x": {"a", "b", "c"},
+				"y": {"b"},
 			},
-			tokens: []string{"a", "b"},
+			tokens: []string{"x", "y"},
 			calls: []intersectCall{
-				{a: []int{1, 3}, b: []int{0, 1, 2}},
+				{a: []string{"b"}, b: []string{"a", "b", "c"}},
 			},
 		},
 		{
 			name: "ok - three tokens",
-			dict: map[string][]int{
-				"a": {0, 1, 2},
-				"b": {1, 3},
-				"c": {1},
+			dict: map[string][]string{
+				"x": {"a", "b", "c"},
+				"y": {"b"},
+				"z": {"b", "d"},
 			},
-			tokens: []string{"a", "b", "c"},
+			tokens: []string{"x", "y", "z"},
 			calls: []intersectCall{
-				{a: []int{1}, b: []int{0, 1, 2}}, // We expect it to start with the shortest list as 'a' param.
-				{a: []int{1}, b: []int{1, 3}},
+				{a: []string{"b"}, b: []string{"a", "b", "c"}}, // We expect it to start with the shortest list as 'a' param.
+				{a: []string{"b"}, b: []string{"b", "d"}},
 			},
 		},
 	}
@@ -65,7 +65,7 @@ func TestIntersect(t *testing.T) {
 			q := NewQuerier(idx).(*querier)
 
 			var calls []intersectCall
-			q.intersectFn = func(a, b []int) []int {
+			q.intersectFn = func(a, b []string) []string {
 				calls = append(calls, intersectCall{a, b})
 				return intersect(a, b)
 			}
@@ -80,27 +80,27 @@ func TestIntersect(t *testing.T) {
 func TestPrivateIntersect(t *testing.T) {
 	tests := []struct {
 		name string
-		a    []int
-		b    []int
-		res  []int
+		a    []string
+		b    []string
+		res  []string
 	}{
 		{
 			name: "a postings list empty",
 			a:    nil,
-			b:    []int{1},
+			b:    []string{"a"},
 			res:  nil,
 		},
 		{
 			name: "b postings list empty",
-			a:    []int{1},
+			a:    []string{"a"},
 			b:    nil,
 			res:  nil,
 		},
 		{
 			name: "ok",
-			a:    []int{0, 10, 200, 1000},
-			b:    []int{10, 250, 500, 1000, 1001},
-			res:  []int{10, 1000},
+			a:    []string{"a", "b", "c"},
+			b:    []string{"a", "c", "e"},
+			res:  []string{"a", "c"},
 		},
 	}
 

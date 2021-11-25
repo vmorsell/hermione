@@ -3,13 +3,13 @@ package main
 import "fmt"
 
 type Querier interface {
-	Intersect(tokens ...string) ([]int, error)
+	Intersect(tokens ...string) ([]string, error)
 }
 
 type querier struct {
 	idx Index
 
-	intersectFn func(a, b []int) []int
+	intersectFn func(a, b []string) []string
 }
 
 func NewQuerier(idx Index) Querier {
@@ -23,12 +23,12 @@ func NewQuerier(idx Index) Querier {
 
 // Intersect fetches the postings lists for all given terms and returns the
 // document ID's present in all lists.
-func (q *querier) Intersect(tokens ...string) ([]int, error) {
+func (q *querier) Intersect(tokens ...string) ([]string, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("no tokens provided")
 	}
 
-	postingsLists := make([][]int, 0, len(tokens))
+	postingsLists := make([][]string, 0, len(tokens))
 	var lowestDocFreqIdx int
 
 	// Fetch all postings lists.
@@ -58,7 +58,7 @@ func (q *querier) Intersect(tokens ...string) ([]int, error) {
 }
 
 // intersect returns the common document ID's from the two given postings lists.
-func intersect(a, b []int) []int {
+func intersect(a, b []string) []string {
 	if len(a) == 0 {
 		return nil
 	}
@@ -66,7 +66,7 @@ func intersect(a, b []int) []int {
 		return nil
 	}
 
-	var res []int
+	var res []string
 
 	aCur := 0
 	bCur := 0
