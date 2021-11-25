@@ -52,7 +52,10 @@ func (q *querier) Intersect(tokens ...string) ([]int, error) {
 
 // intersect returns the intersection between two postings lists a and b.
 func intersect(a, b []int) []int {
-	if len(a) == 0 || len(b) == 0 {
+	if len(a) == 0 {
+		return nil
+	}
+	if len(b) == 0 {
 		return nil
 	}
 
