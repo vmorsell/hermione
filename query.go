@@ -16,6 +16,8 @@ func NewQuerier(idx Index) Querier {
 	}
 }
 
+// Intersect fetches the postings lists for all given terms and returns the
+// document ID's present in all lists.
 func (q *querier) Intersect(tokens ...string) ([]int, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("no tokens provided")
@@ -50,7 +52,7 @@ func (q *querier) Intersect(tokens ...string) ([]int, error) {
 	return res, nil
 }
 
-// intersect returns the intersection between two postings lists a and b.
+// intersect returns the common document ID's from the two given postings lists.
 func intersect(a, b []int) []int {
 	if len(a) == 0 {
 		return nil
