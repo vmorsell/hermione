@@ -22,7 +22,6 @@ func TestIndexDocument(t *testing.T) {
 		name         string
 		dict         map[string][]int
 		docIDCounter int
-		idx          *index
 		r            io.Reader
 		wantDict     map[string][]int
 		err          error
@@ -55,8 +54,8 @@ func TestIndexDocument(t *testing.T) {
 		idx.dict = tt.dict
 		idx.docIDCounter = tt.docIDCounter
 
-		tt.idx.IndexDocument(tt.r)
-		require.EqualValues(t, tt.wantDict, tt.idx.dict)
+		idx.IndexDocument(tt.r)
+		require.EqualValues(t, tt.wantDict, idx.dict)
 	}
 }
 
