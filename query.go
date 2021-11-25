@@ -8,36 +8,61 @@ type Querier interface {
 
 type querier struct {
 	idx Index
+
+	intersectFn func(a, b []int) []int
 }
 
 func NewQuerier(idx Index) Querier {
 	return &querier{
 		idx: idx,
+
+		// Use the default functions
+		intersectFn: intersect,
 	}
 }
 
+// Intersect fetches the postings lists for all given terms and returns the
+// document ID's present in all lists.
 func (q *querier) Intersect(tokens ...string) ([]int, error) {
-	var res []int
+	if len(tokens) == 0 {
+		return nil, fmt.Errorf("no tokens provided")
+	}
 
+	postingsLists := make([][]int, 0, len(tokens))
+	var lowestDocFreqIdx int
+
+	// Fetch all postings lists.
 	for _, t := range tokens {
 		postings, err := q.idx.Postings(t)
 		if err != nil {
 			return nil, fmt.Errorf("get postings list: %w", err)
 		}
+		postingsLists = append(postingsLists, postings)
 
-		// Start with the full first postings list.
-		if res == nil {
-			res = postings
+		// Keep track of the shortest postings list. We will start with
+		// that one when doing the intersection.
+		if len(postingsLists[lowestDocFreqIdx]) > len(postings) {
+			lowestDocFreqIdx = len(postingsLists) - 1
+		}
+	}
+
+	res := postingsLists[lowestDocFreqIdx]
+	for i, l := range postingsLists {
+		if i == lowestDocFreqIdx {
 			continue
 		}
-		res = intersect(res, postings)
+
+		res = q.intersectFn(res, l)
 	}
 	return res, nil
 }
 
-// intersect returns the intersection between two postings lists a and b.
+// intersect returns the common document ID's from the two given postings lists.
 func intersect(a, b []int) []int {
-	if len(a) == 0 || len(b) == 0 {
+	if len(a) == 0 {
+		return nil
+	}
+	if len(b) == 0 {
 		return nil
 	}
 
