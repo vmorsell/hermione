@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -73,15 +72,14 @@ func handleGet(s *service, w http.ResponseWriter, req *http.Request) {
 
 	var docs []Document
 	for _, id := range ids {
-		idString := strconv.Itoa(id)
-		source, err := s.store.Get(idString)
+		source, err := s.store.Get(id)
 		if err != nil {
 			log.Printf("get: %v", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 		docs = append(docs, Document{
-			ID:     idString,
+			ID:     id,
 			Source: string(source),
 		})
 	}
@@ -111,7 +109,7 @@ func handlePost(s *service, w http.ResponseWriter, req *http.Request) {
 	}
 
 	r2 := bytes.NewReader(buf.Bytes())
-	err = s.store.PutFromStream(r2, strconv.Itoa(id))
+	err = s.store.PutFromStream(r2, id)
 	if err != nil {
 		log.Printf("put from stream: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
