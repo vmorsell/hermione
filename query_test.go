@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestIntersect(t *testing.T) {
 	type intersectCall struct {
 		a, b []int
 	}
@@ -76,7 +77,7 @@ import (
 	}
 }
 
-func TestIntersect(t *testing.T) {
+func TestPrivateIntersect(t *testing.T) {
 	tests := []struct {
 		name string
 		a    []int
