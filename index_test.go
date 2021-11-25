@@ -9,7 +9,7 @@ import (
 )
 
 func TestNextDocID(t *testing.T) {
-	idx := index{}
+	idx := NewIndex().(*index)
 
 	for i := 0; i < 10; i++ {
 		id := idx.nextDocID()
@@ -19,18 +19,18 @@ func TestNextDocID(t *testing.T) {
 
 func TestIndexDocument(t *testing.T) {
 	tests := []struct {
-		name     string
-		idx      *index
-		r        io.Reader
-		wantDict map[string][]int
-		err      error
+		name         string
+		dict         map[string][]int
+		docIDCounter int
+		idx          *index
+		r            io.Reader
+		wantDict     map[string][]int
+		err          error
 	}{
 		{
 			name: "ok, first document",
-			idx: &index{
-				dict: map[string][]int{},
-			},
-			r: strings.NewReader("Hello, world!"),
+			dict: map[string][]int{},
+			r:    strings.NewReader("Hello, world!"),
 			wantDict: map[string][]int{
 				"hello": {0},
 				"world": {0},
@@ -38,13 +38,11 @@ func TestIndexDocument(t *testing.T) {
 		},
 		{
 			name: "ok, second document",
-			idx: &index{
-				dict: map[string][]int{
-					"hello": {0},
-				},
-				docIDCounter: 1,
+			dict: map[string][]int{
+				"hello": {0},
 			},
-			r: strings.NewReader("Hello, world!"),
+			docIDCounter: 1,
+			r:            strings.NewReader("Hello, world!"),
 			wantDict: map[string][]int{
 				"hello": {0, 1},
 				"world": {1},
@@ -53,6 +51,10 @@ func TestIndexDocument(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		idx := NewIndex().(*index)
+		idx.dict = tt.dict
+		idx.docIDCounter = tt.docIDCounter
+
 		tt.idx.IndexDocument(tt.r)
 		require.EqualValues(t, tt.wantDict, tt.idx.dict)
 	}
@@ -85,9 +87,8 @@ func TestGetPostingsList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		idx := &index{
-			dict: tt.dict,
-		}
+		idx := NewIndex().(*index)
+		idx.dict = tt.dict
 
 		res, err := idx.Postings(tt.token)
 		require.Equal(t, tt.err, err)
