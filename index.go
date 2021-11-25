@@ -6,7 +6,7 @@ import (
 )
 
 type Index interface {
-	IndexDocument(r io.Reader) error
+	IndexDocument(r io.Reader) (int, error)
 	Postings(token string) ([]int, error)
 }
 
@@ -28,15 +28,15 @@ func (idx *index) nextDocID() int {
 }
 
 // IndexDocument tokenizes the document from the reader and adds the tokens to
-// the index.
-func (idx *index) IndexDocument(r io.Reader) error {
+// the index. It returns the ID of the new document.
+func (idx *index) IndexDocument(r io.Reader) (int, error) {
 	docID := idx.nextDocID()
 
 	tokenizer := NewTokenizer(r)
 	for tokenizer.HasMoreTokens() {
 		t, err := tokenizer.NextToken()
 		if err != nil {
-			return fmt.Errorf("next token: %w", err)
+			return 0, fmt.Errorf("next token: %w", err)
 		}
 
 		if _, ok := idx.dict[t]; !ok {
@@ -44,7 +44,7 @@ func (idx *index) IndexDocument(r io.Reader) error {
 		}
 		idx.dict[t] = append(idx.dict[t], docID)
 	}
-	return nil
+	return docID, nil
 }
 
 var errTokenNotInIndex = func(token string) error { return fmt.Errorf("token '%s' not found in index", token) }
