@@ -26,7 +26,7 @@ func TestIntersect(t *testing.T) {
 		{
 			name: "not ok - token not found",
 			dict: map[string][]string{
-				"x": {"a"},
+				"x": {"doc1"},
 			},
 			tokens: []string{"x", "y"},
 			err:    fmt.Errorf("get postings list: %w", errTokenNotInIndex("y")),
@@ -34,25 +34,25 @@ func TestIntersect(t *testing.T) {
 		{
 			name: "ok - two tokens",
 			dict: map[string][]string{
-				"x": {"a", "b", "c"},
-				"y": {"b"},
+				"x": {"doc1", "doc2", "doc3"},
+				"y": {"doc2"},
 			},
 			tokens: []string{"x", "y"},
 			calls: []intersectCall{
-				{a: []string{"b"}, b: []string{"a", "b", "c"}},
+				{a: []string{"doc2"}, b: []string{"doc1", "doc2", "doc3"}},
 			},
 		},
 		{
 			name: "ok - three tokens",
 			dict: map[string][]string{
-				"x": {"a", "b", "c"},
-				"y": {"b"},
-				"z": {"b", "d"},
+				"x": {"doc1", "doc2", "doc3"},
+				"y": {"doc2"},
+				"z": {"doc2", "doc4"},
 			},
 			tokens: []string{"x", "y", "z"},
 			calls: []intersectCall{
-				{a: []string{"b"}, b: []string{"a", "b", "c"}}, // We expect it to start with the shortest list as 'a' param.
-				{a: []string{"b"}, b: []string{"b", "d"}},
+				{a: []string{"doc2"}, b: []string{"doc1", "doc2", "doc3"}}, // We expect it to start with the shortest list as 'a' param.
+				{a: []string{"doc2"}, b: []string{"doc2", "doc4"}},
 			},
 		},
 	}
@@ -87,20 +87,20 @@ func TestPrivateIntersect(t *testing.T) {
 		{
 			name: "a postings list empty",
 			a:    nil,
-			b:    []string{"a"},
+			b:    []string{"doc1"},
 			res:  nil,
 		},
 		{
 			name: "b postings list empty",
-			a:    []string{"a"},
+			a:    []string{"doc1"},
 			b:    nil,
 			res:  nil,
 		},
 		{
 			name: "ok",
-			a:    []string{"a", "b", "c"},
-			b:    []string{"a", "c", "e"},
-			res:  []string{"a", "c"},
+			a:    []string{"doc1", "doc2", "doc3"},
+			b:    []string{"doc1", "doc3", "doc5"},
+			res:  []string{"doc1", "doc3"},
 		},
 	}
 

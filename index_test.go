@@ -19,25 +19,25 @@ func TestIndexDocument(t *testing.T) {
 		err          error
 	}{
 		{
-			name: "ok, first document",
+			name: "ok - first document in index",
 			dict: map[string][]string{},
-			idFn: func() (string, error) { return "a", nil },
+			idFn: func() (string, error) { return "doc1", nil },
 			r:    strings.NewReader("Hello, world!"),
 			wantDict: map[string][]string{
-				"hello": {"a"},
-				"world": {"a"},
+				"hello": {"doc1"},
+				"world": {"doc1"},
 			},
 		},
 		{
-			name: "ok, second document",
+			name: "ok - second document in index",
 			dict: map[string][]string{
-				"hello": {"a"},
+				"hello": {"doc1"},
 			},
-			idFn: func() (string, error) { return "b", nil },
+			idFn: func() (string, error) { return "doc2", nil },
 			r:    strings.NewReader("Hello, world!"),
 			wantDict: map[string][]string{
-				"hello": {"a", "b"},
-				"world": {"b"},
+				"hello": {"doc1", "doc2"},
+				"world": {"doc2"},
 			},
 		},
 	}
@@ -65,18 +65,18 @@ func TestGetPostingsList(t *testing.T) {
 		{
 			name: "not ok, token not found in dict",
 			dict: map[string][]string{
-				"other": {"a"},
+				"hello": {"doc1"},
 			},
-			token: "x",
-			err:   errTokenNotInIndex("x"),
+			token: "world",
+			err:   errTokenNotInIndex("world"),
 		},
 		{
 			name: "ok",
 			dict: map[string][]string{
-				"x": {"a"},
+				"hello": {"doc1"},
 			},
-			token: "x",
-			res:   []string{"a"},
+			token: "hello",
+			res:   []string{"doc1"},
 		},
 	}
 
