@@ -1,9 +1,6 @@
 name: Test & Build
 
-on:
-  push:
-    branches:
-      - "*"
+on: push
 
 env:
   GO_VERSION: "1.17.3"
