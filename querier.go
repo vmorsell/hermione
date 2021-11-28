@@ -1,8 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Querier interface {
+	Boolean(query string) ([]string, error)
 	Intersect(tokens ...string) ([]string, error)
 }
 
@@ -19,6 +23,13 @@ func NewQuerier(idx Index) Querier {
 		// Use the default functions
 		intersectFn: intersect,
 	}
+}
+
+// Boolean takes a query expression and returns matching documents using
+// boolean retrieval.
+func (q *querier) Boolean(query string) ([]string, error) {
+	tokens := strings.Split(query, " ")
+	return q.Intersect(tokens...)
 }
 
 // Intersect fetches the postings lists for all given terms and returns the

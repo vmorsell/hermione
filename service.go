@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type Service interface {
@@ -30,17 +29,8 @@ func NewService(idx Index, querier Querier, store Store) Service {
 }
 
 func (s *service) Start() error {
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		switch req.Method {
-		case "GET":
-			handleGet(s, w, req)
-		case "POST":
-			handlePost(s, w, req)
-		default:
-			http.Error(w, "", http.StatusMethodNotAllowed)
-			return
-		}
-	})
+	http.HandleFunc("/search/boolean", s.handleBooleanSearch)
+	http.HandleFunc("/doc", s.handleDoc)
 
 	return http.ListenAndServe(s.addr, nil)
 }
@@ -54,18 +44,24 @@ type GetResponseBody struct {
 	Documents []Document
 }
 
-// Get takes the tokens in the query, intersects them and returns a list of
-// the matching documents.
-func handleGet(s *service, w http.ResponseWriter, req *http.Request) {
-	tokens := strings.Split(req.URL.Query().Get("tokens"), ",")
-	if len(tokens) == 0 {
-		log.Printf("no tokens provided")
+// handleBooleanSearch takes a search query and returns the matching documents
+// using boolean retrieval.
+func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		log.Printf("unsupported http method: %s", req.Method)
+		http.Error(w, "", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := req.URL.Query().Get("query")
+	if len(query) == 0 {
+		log.Printf("no query provided")
 		http.Error(w, "", http.StatusBadRequest)
 	}
 
-	ids, err := s.querier.Intersect(tokens...)
+	ids, err := s.querier.Boolean(query)
 	if err != nil {
-		log.Printf("intersect: %v", err)
+		log.Printf("boolean: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
@@ -97,7 +93,13 @@ func handleGet(s *service, w http.ResponseWriter, req *http.Request) {
 }
 
 // handlePost takes an document in the body, indexes it and stores it to disk.
-func handlePost(s *service, w http.ResponseWriter, req *http.Request) {
+func (s *service) handleDoc(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "POST" {
+		log.Printf("unsupported http method: %s", req.Method)
+		http.Error(w, "", http.StatusMethodNotAllowed)
+		return
+	}
+
 	buf := bytes.Buffer{}
 	r := io.TeeReader(req.Body, &buf)
 
