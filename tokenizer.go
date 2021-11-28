@@ -39,8 +39,16 @@ out:
 			return "", fmt.Errorf("read byte: %w", err)
 		}
 
-		// Token can also end on a space or a line break character.
-		if b == ' ' || b == '\n' {
+		// Spaces can end a token, but only if we already have bytes in the buffer.
+		if b == ' ' {
+			if token.Len() == 0 {
+				continue
+			}
+			break
+		}
+
+		// Always end tokens on line breaks.
+		if b == '\n' {
 			break
 		}
 
