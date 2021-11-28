@@ -36,7 +36,7 @@ func main() {
 
 	for _, d := range docs {
 		r := bytes.NewReader([]byte(d))
-		req, err := http.NewRequest("POST", "http://localhost:5001", r)
+		req, err := http.NewRequest("POST", "http://localhost:5001/doc", r)
 		if err != nil {
 			log.Printf("new request: %v", err)
 		}
