@@ -6,14 +6,14 @@ import (
 )
 
 type Querier interface {
-	Boolean(query string) ([]string, error)
-	Intersect(tokens ...string) ([]string, error)
+	Boolean(query string) ([]Posting, error)
+	Intersect(tokens ...string) ([]Posting, error)
 }
 
 type querier struct {
 	idx Index
 
-	intersectFn func(a, b []string) []string
+	intersectFn func(a, b []Posting) []Posting
 }
 
 func NewQuerier(idx Index) Querier {
@@ -27,19 +27,19 @@ func NewQuerier(idx Index) Querier {
 
 // Boolean takes a query expression and returns matching documents using
 // boolean retrieval.
-func (q *querier) Boolean(query string) ([]string, error) {
+func (q *querier) Boolean(query string) ([]Posting, error) {
 	tokens := strings.Split(query, " ")
 	return q.Intersect(tokens...)
 }
 
 // Intersect fetches the postings lists for all given terms and returns the
 // document ID's present in all lists.
-func (q *querier) Intersect(tokens ...string) ([]string, error) {
+func (q *querier) Intersect(tokens ...string) ([]Posting, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("no tokens provided")
 	}
 
-	postingsLists := make([][]string, 0, len(tokens))
+	postingsLists := make([][]Posting, 0, len(tokens))
 	var lowestDocFreqIdx int
 
 	// Fetch all postings lists.
@@ -69,7 +69,7 @@ func (q *querier) Intersect(tokens ...string) ([]string, error) {
 }
 
 // intersect returns the common document ID's from the two given postings lists.
-func intersect(a, b []string) []string {
+func intersect(a, b []Posting) []Posting {
 	if len(a) == 0 {
 		return nil
 	}
@@ -77,7 +77,7 @@ func intersect(a, b []string) []string {
 		return nil
 	}
 
-	var res []string
+	var res []Posting
 
 	aCur := 0
 	bCur := 0
@@ -87,14 +87,19 @@ func intersect(a, b []string) []string {
 			break
 		}
 
-		if a[aCur] == b[bCur] {
-			res = append(res, a[aCur])
+		if a[aCur].DocID == b[bCur].DocID {
+			f := a[aCur].Freq
+			bf := b[bCur].Freq
+			if bf < f {
+				f = bf
+			}
+			res = append(res, Posting{a[aCur].DocID, f})
 			aCur++
 			bCur++
 			continue
 		}
 
-		if a[aCur] > b[bCur] {
+		if a[aCur].DocID > b[bCur].DocID {
 			bCur++
 		} else {
 			aCur++

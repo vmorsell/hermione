@@ -9,12 +9,12 @@ import (
 
 func TestIntersect(t *testing.T) {
 	type intersectCall struct {
-		a, b []string
+		a, b []Posting
 	}
 
 	tests := []struct {
 		name   string
-		dict   map[string][]string
+		dict   map[string][]Posting
 		tokens []string
 		calls  []intersectCall
 		err    error
@@ -25,34 +25,77 @@ func TestIntersect(t *testing.T) {
 		},
 		{
 			name: "not ok - token not found",
-			dict: map[string][]string{
-				"x": {"doc1"},
+			dict: map[string][]Posting{
+				"x": {
+					{DocID: "doc1", Freq: 1},
+				},
 			},
 			tokens: []string{"x", "y"},
 			err:    fmt.Errorf("get postings list: %w", errTokenNotInIndex("y")),
 		},
 		{
 			name: "ok - two tokens",
-			dict: map[string][]string{
-				"x": {"doc1", "doc2", "doc3"},
-				"y": {"doc2"},
+			dict: map[string][]Posting{
+				"x": {
+					{DocID: "doc1", Freq: 1},
+					{DocID: "doc2", Freq: 1},
+					{DocID: "doc3", Freq: 1},
+				},
+				"y": {
+					{DocID: "doc2", Freq: 1},
+				},
 			},
 			tokens: []string{"x", "y"},
 			calls: []intersectCall{
-				{a: []string{"doc2"}, b: []string{"doc1", "doc2", "doc3"}},
+				{
+					a: []Posting{
+						{DocID: "doc2", Freq: 1},
+					},
+					b: []Posting{
+						{DocID: "doc1", Freq: 1},
+						{DocID: "doc2", Freq: 1},
+						{DocID: "doc3", Freq: 1},
+					},
+				},
 			},
 		},
 		{
 			name: "ok - three tokens",
-			dict: map[string][]string{
-				"x": {"doc1", "doc2", "doc3"},
-				"y": {"doc2"},
-				"z": {"doc2", "doc4"},
+			dict: map[string][]Posting{
+				"x": {
+					{DocID: "doc1", Freq: 1},
+					{DocID: "doc2", Freq: 1},
+					{DocID: "doc3", Freq: 1},
+				},
+				"y": {
+					{DocID: "doc2", Freq: 1},
+				},
+				"z": {
+					{DocID: "doc2", Freq: 1},
+					{DocID: "doc4", Freq: 1},
+				},
 			},
 			tokens: []string{"x", "y", "z"},
 			calls: []intersectCall{
-				{a: []string{"doc2"}, b: []string{"doc1", "doc2", "doc3"}}, // We expect it to start with the shortest list as 'a' param.
-				{a: []string{"doc2"}, b: []string{"doc2", "doc4"}},
+				{
+					a: []Posting{
+						{DocID: "doc2", Freq: 1}, // We expect it to start with the shortest list as 'a' param.
+					},
+					b: []Posting{
+						{DocID: "doc1", Freq: 1},
+						{DocID: "doc2", Freq: 1},
+						{DocID: "doc3", Freq: 1},
+					},
+				},
+				{
+					a: []Posting{
+						{DocID: "doc2", Freq: 1},
+					},
+					b: []Posting{
+						{DocID: "doc2", Freq: 1},
+						{DocID: "doc4", Freq: 1},
+					},
+				},
 			},
 		},
 	}
@@ -65,7 +108,7 @@ func TestIntersect(t *testing.T) {
 			q := NewQuerier(idx).(*querier)
 
 			var calls []intersectCall
-			q.intersectFn = func(a, b []string) []string {
+			q.intersectFn = func(a, b []Posting) []Posting {
 				calls = append(calls, intersectCall{a, b})
 				return intersect(a, b)
 			}
@@ -80,27 +123,27 @@ func TestIntersect(t *testing.T) {
 func TestPrivateIntersect(t *testing.T) {
 	tests := []struct {
 		name string
-		a    []string
-		b    []string
-		res  []string
+		a    []Posting
+		b    []Posting
+		res  []Posting
 	}{
 		{
 			name: "a postings list empty",
 			a:    nil,
-			b:    []string{"doc1"},
+			b:    []Posting{{DocID: "doc1", Freq: 1}},
 			res:  nil,
 		},
 		{
 			name: "b postings list empty",
-			a:    []string{"doc1"},
+			a:    []Posting{{DocID: "doc1", Freq: 1}},
 			b:    nil,
 			res:  nil,
 		},
 		{
 			name: "ok",
-			a:    []string{"doc1", "doc2", "doc3"},
-			b:    []string{"doc1", "doc3", "doc5"},
-			res:  []string{"doc1", "doc3"},
+			a:    []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc2", Freq: 1}, {DocID: "doc3", Freq: 1}},
+			b:    []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc3", Freq: 1}, {DocID: "doc5", Freq: 1}},
+			res:  []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc3", Freq: 1}},
 		},
 	}
 

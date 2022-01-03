@@ -59,7 +59,7 @@ func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "", http.StatusBadRequest)
 	}
 
-	ids, err := s.querier.Boolean(query)
+	postings, err := s.querier.Boolean(query)
 	if err != nil {
 		log.Printf("boolean: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -67,15 +67,15 @@ func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) 
 	}
 
 	var docs []Document
-	for _, id := range ids {
-		source, err := s.store.Get(id)
+	for _, p := range postings {
+		source, err := s.store.Get(p.DocID)
 		if err != nil {
 			log.Printf("get: %v", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 		docs = append(docs, Document{
-			ID:     id,
+			ID:     p.DocID,
 			Source: string(source),
 		})
 	}
