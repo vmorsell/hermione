@@ -36,22 +36,19 @@ type Tokenizer interface {
 type tokenizer struct {
 	r          *bufio.Reader
 	tokenQueue []string
+	patterns   []regexp.Regexp
 }
 
 func NewTokenizer(reader io.Reader) Tokenizer {
 	return &tokenizer{
-		r: bufio.NewReader(reader),
+		r:        bufio.NewReader(reader),
+		patterns: tokenPatterns(),
 	}
 }
 
 // NextToken reads the next token from the reader and returns it as a string.
 func (t *tokenizer) NextToken() (string, error) {
-	for {
-		if len(t.tokenQueue) > 0 {
-			break
-		}
-
-		// No tokens in queue. Read and tokenize next word.
+	for len(t.tokenQueue) == 0 {
 		word, err := t.ReadNextWord()
 		if err != nil {
 			return "", fmt.Errorf("read next word: %w", err)
@@ -63,7 +60,6 @@ func (t *tokenizer) NextToken() (string, error) {
 		}
 
 		t.tokenQueue = append(t.tokenQueue, tokens...)
-
 	}
 
 	next := t.tokenQueue[0]
@@ -103,16 +99,11 @@ readByte:
 }
 
 func (t *tokenizer) TokensFromWord(w string) ([]string, error) {
-	regexps, err := TokenPatterns()
-	if err != nil {
-		return nil, fmt.Errorf("token patterns: %w", err)
-	}
-
 	var out []string
-	for _, re := range regexps {
-		if tokens := re.FindAllString(w, -1); tokens != nil {
+	for _, p := range t.patterns {
+		if tokens := p.FindAllString(w, -1); tokens != nil {
 			out = append(out, tokens...)
-			w = re.ReplaceAllString(w, "")
+			w = p.ReplaceAllString(w, "")
 		}
 	}
 	return out, nil
@@ -125,14 +116,11 @@ func (t *tokenizer) HasMoreTokens() bool {
 }
 
 // TokenPatterns returns regexps for all allowed complex token patterns.
-func TokenPatterns() ([]regexp.Regexp, error) {
+func tokenPatterns() []regexp.Regexp {
 	var out []regexp.Regexp
 	for _, p := range patterns {
-		re, err := regexp.Compile(p)
-		if err != nil {
-			return nil, fmt.Errorf("compile pattern `%s`: %w", p, err)
-		}
+		re := regexp.MustCompile(p)
 		out = append(out, *re)
 	}
-	return out, nil
+	return out
 }
