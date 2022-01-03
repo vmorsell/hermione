@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -73,4 +75,43 @@ func TestHasMoreTokens(t *testing.T) {
 			require.Equal(t, tt.res, res)
 		})
 	}
+}
+
+// Tokenize the file tokenizer_test_corpus.txt and verify that the result
+// corresponds with the tokens in tokenizer_test_tokens.txt
+func TestTokenizeCorpus(t *testing.T) {
+	corpusFile, err := os.Open("tokenizer_test_corpus.txt")
+	require.Nil(t, err)
+	defer corpusFile.Close()
+
+	wantFile, err := os.Open("tokenizer_test_tokens.txt")
+	require.Nil(t, err)
+	defer wantFile.Close()
+
+	want := make(map[string]int)
+	scanner := bufio.NewScanner(wantFile)
+	for scanner.Scan() {
+		_, ok := want[scanner.Text()]
+		if !ok {
+			want[scanner.Text()] = 1
+		} else {
+			want[scanner.Text()] += 1
+		}
+	}
+
+	s := NewTokenizer(corpusFile)
+
+	got := make(map[string]int)
+	for s.HasMoreTokens() {
+		token, err := s.NextToken()
+		require.Nil(t, err)
+		_, ok := got[token]
+		if !ok {
+			got[token] = 1
+		} else {
+			got[token] += 1
+		}
+	}
+
+	require.EqualValues(t, want, got)
 }
