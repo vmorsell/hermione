@@ -41,6 +41,7 @@ type Document struct {
 }
 
 type GetResponseBody struct {
+	Hits      int
 	Documents []Document
 }
 
@@ -81,6 +82,7 @@ func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) 
 	}
 
 	jsonResp, err := json.Marshal(GetResponseBody{
+		Hits:      len(docs),
 		Documents: docs,
 	})
 	if err != nil {
