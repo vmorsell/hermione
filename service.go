@@ -32,6 +32,8 @@ func (s *service) Start() error {
 	http.HandleFunc("/search/boolean", s.handleBooleanSearch)
 	http.HandleFunc("/doc", s.handleDoc)
 
+	http.HandleFunc("/debug/postings", s.handleDebugPostings)
+
 	return http.ListenAndServe(s.addr, nil)
 }
 
@@ -121,4 +123,44 @@ func (s *service) handleDoc(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.WriteHeader(200)
+}
+
+type PostingsBody struct {
+	Len       int
+	Documents []Posting
+}
+
+// handleDebugPostings serves a full postings list.
+// The query accepts a token as a query parameter.
+func (s *service) handleDebugPostings(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		log.Printf("unsupported http method: %s", req.Method)
+		http.Error(w, "", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := req.URL.Query().Get("token")
+	if len(token) == 0 {
+		log.Printf("no token provided")
+		http.Error(w, "", http.StatusBadRequest)
+	}
+
+	postings, err := s.idx.Postings(token)
+	if err != nil {
+		log.Printf("postings: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	jsonResp, err := json.Marshal(PostingsBody{
+		Len:       len(postings),
+		Documents: postings,
+	})
+	if err != nil {
+		log.Printf("marshal: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(jsonResp)
 }
