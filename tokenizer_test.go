@@ -88,19 +88,30 @@ func TestTokenizeCorpus(t *testing.T) {
 	require.Nil(t, err)
 	defer wantFile.Close()
 
-	var want []string
+	want := make(map[string]int)
 	scanner := bufio.NewScanner(wantFile)
 	for scanner.Scan() {
-		want = append(want, scanner.Text())
+		_, ok := want[scanner.Text()]
+		if !ok {
+			want[scanner.Text()] = 1
+		} else {
+			want[scanner.Text()] += 1
+		}
 	}
 
 	s := NewTokenizer(corpusFile)
 
-	var got []string
+	got := make(map[string]int)
 	for s.HasMoreTokens() {
 		token, err := s.NextToken()
 		require.Nil(t, err)
-		got = append(got, token)
+		_, ok := got[token]
+		if !ok {
+			got[token] = 1
+		} else {
+			got[token] += 1
+		}
 	}
-	require.Equal(t, want, got)
+
+	require.EqualValues(t, want, got)
 }
