@@ -8,17 +8,24 @@ import (
 	"regexp"
 )
 
+var stopBytes = []byte{' ', '\n'}
+
 var patterns = []string{
-	`https?:\/\/\S+`,                     // Web addresses
-	`[\w\._-]+@[\w\._-]+\.\w+`,           // Email addresses
-	`\d+/\d+`,                            // Twenty-four seven
-	`\w+'\w+`,                            // Contraditions
-	`'em`,                                // 'em
-	`\$\d+`,                              // UDS amounts
-	`a\.m\.|p\.m\.|a\.d\.|b\.c\.|e\.g\.`, // Abbreviations
-	`(\w+[\.,-])+\w+`,                    // Chars or digits separated with dot, comma or dash
-	`(\d{2}:)+\d{2}`,                     // Time
-	`\+\d+`,                              // Numbers beginning with +
+	`https?:\/\/[a-z0-9\/\?&\.,=\-_:#\+%@!]+`, // URL:s
+	`[a-z0-9\.\-_]+@[a-z0-9\.\-]+\.[a-z]+`,    // E-mail addresses.
+	`[a-z]+\.[a-z]+\.`,                        // Abbreviations.
+	`[a-z0-9_]+\.[a-z]+`,                      // File names.
+	`([a-z0-9]+\-)+[a-z0-9]+`,                 // Words and numbers with dashes in them.
+	`([0-9]+\.)+[0-9]+`,                       // Numbers with dots.
+	`([0-9]+\-)+[0-9]+`,                       // Numbers with dashes.
+	`([0-9]+,)+[0-9]+`,                        // Numbers with commas.
+	`[0-9]+\/[0-9]+`,                          // 24/7 etc.
+	`[a-z]+'[a-z]+`,                           // he's etc.
+	`'em`,                                     // 'em.
+	`([0-9]+:)+[0-9]+`,                        // Digital time representations.
+	`\$[0-9]+`,                                // USD amounts.
+	`\+[0-9]+`,                                // Phone numbers
+	`[a-z0-9]+`,                               // Default token.
 }
 
 type Tokenizer interface {
@@ -27,7 +34,8 @@ type Tokenizer interface {
 }
 
 type tokenizer struct {
-	r *bufio.Reader
+	r          *bufio.Reader
+	tokenQueue []string
 }
 
 func NewTokenizer(reader io.Reader) Tokenizer {
@@ -38,65 +46,76 @@ func NewTokenizer(reader io.Reader) Tokenizer {
 
 // NextToken reads the next token from the reader and returns it as a string.
 func (t *tokenizer) NextToken() (string, error) {
-	var token bytes.Buffer
+	for {
+		if len(t.tokenQueue) > 0 {
+			break
+		}
 
-	filter := []byte("!\"#€%&/()=?´`'©@£$∞§|[]≈±¨^*,.-;:_<>§°¶")
+		// No tokens in queue. Read and tokenize next word.
+		word, err := t.ReadNextWord()
+		if err != nil {
+			return "", fmt.Errorf("read next word: %w", err)
+		}
 
+		tokens, err := t.TokensFromWord(word)
+		if err != nil {
+			return "", fmt.Errorf("tokens from word: %w", err)
+		}
+
+		t.tokenQueue = append(t.tokenQueue, tokens...)
+
+	}
+
+	next := t.tokenQueue[0]
+	if len(t.tokenQueue) > 1 {
+		t.tokenQueue = t.tokenQueue[1:]
+	} else {
+		t.tokenQueue = nil
+	}
+	return next, nil
+}
+
+func (t *tokenizer) ReadNextWord() (string, error) {
+	var out bytes.Buffer
+
+readByte:
 	for {
 		b, err := t.r.ReadByte()
 		if err != nil {
 			if err == io.EOF {
-				// Token can end on EOF.
+				// End word at EOF.
 				break
 			}
 			return "", fmt.Errorf("read byte: %w", err)
 		}
 
-		// Spaces can end a token, but only if we already have bytes in the buffer.
-		if b == ' ' {
-			if token.Len() == 0 {
-				continue
-			}
-			break
-		}
-
-		// Always end tokens on line breaks.
-		if b == '\n' {
-			break
-		}
-
-		lower := bytes.ToLower([]byte{b})
-		token.WriteByte(lower[0])
-	}
-
-	patterns, err := TokenPatterns()
-	if err != nil {
-		return "", fmt.Errorf("token patterns: %w", err)
-	}
-	for _, p := range patterns {
-		if p.Match(token.Bytes()) {
-			return token.String(), nil
-		}
-	}
-
-	// Token does not match pattern. Remove special characters.
-	var out bytes.Buffer
-nextByte:
-	for _, b := range token.Bytes() {
-		for _, f := range filter {
-			if b == f {
-				continue nextByte
+		for _, s := range stopBytes {
+			if s == b {
+				break readByte
 			}
 		}
-		out.WriteByte(b)
-	}
 
-	// Ignore empty tokens.
-	if out.Len() == 0 {
-		return t.NextToken()
+		c := bytes.ToLower([]byte{b})[0]
+		out.WriteByte(c)
 	}
 
 	return out.String(), nil
+}
+
+func (t *tokenizer) TokensFromWord(w string) ([]string, error) {
+	regexps, err := TokenPatterns()
+	if err != nil {
+		return nil, fmt.Errorf("token patterns: %w", err)
+	}
+
+	var out []string
+	for _, re := range regexps {
+		if tokens := re.FindAllString(w, -1); tokens != nil {
+			out = append(out, tokens...)
+			w = re.ReplaceAllString(w, "")
+		}
+	}
+	return out, nil
 }
 
 // HasMoreTokens returns if there are more tokens to read.
