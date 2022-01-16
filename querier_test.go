@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntersect(t *testing.T) {
+func TestIntersection(t *testing.T) {
 	type intersectCall struct {
 		a, b []Posting
 	}
@@ -108,19 +108,19 @@ func TestIntersect(t *testing.T) {
 			q := NewQuerier(idx).(*querier)
 
 			var calls []intersectCall
-			q.intersectFn = func(a, b []Posting) []Posting {
+			q.intersectionFn = func(a, b []Posting) []Posting {
 				calls = append(calls, intersectCall{a, b})
-				return intersect(a, b)
+				return intersection(a, b)
 			}
 
-			_, err := q.Intersect(tt.tokens...)
+			_, err := q.Intersection(tt.tokens...)
 			require.Equal(t, tt.err, err)
 			require.Equal(t, tt.calls, calls)
 		})
 	}
 }
 
-func TestPrivateIntersect(t *testing.T) {
+func TestPrivateIntersection(t *testing.T) {
 	tests := []struct {
 		name string
 		a    []Posting
@@ -149,7 +149,7 @@ func TestPrivateIntersect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := intersect(tt.a, tt.b)
+			res := intersection(tt.a, tt.b)
 			require.Equal(t, tt.res, res)
 		})
 	}
