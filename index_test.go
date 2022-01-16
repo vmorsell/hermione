@@ -138,6 +138,15 @@ func TestGetPostingsList(t *testing.T) {
 	}
 }
 
+func TestID(t *testing.T) {
+	index := NewIndex().(*index)
+
+	for want := 0; want < 3; want++ {
+		id := index.id()
+		require.Equal(t, want, id)
+	}
+}
+
 func TestMax(t *testing.T) {
 	tests := []struct {
 		name string
