@@ -154,3 +154,64 @@ func TestPrivateIntersection(t *testing.T) {
 		})
 	}
 }
+
+func TestPrivatePhrase(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b []Posting
+		res  []Posting
+	}{
+		{
+			name: "no matches",
+			a: []Posting{
+				{
+					DocID:     0,
+					Positions: []int{0},
+				},
+				{
+					DocID:     10,
+					Positions: []int{10},
+				},
+			},
+			b: []Posting{
+				{
+					DocID:     10,
+					Positions: []int{1},
+				},
+			},
+		},
+		{
+			name: "match",
+			a: []Posting{
+				{
+					DocID:     10,
+					Positions: []int{0, 4, 10},
+				},
+			},
+			b: []Posting{
+				{
+					DocID:     0,
+					Positions: []int{1, 5, 11},
+				},
+				{
+					DocID:     10,
+					Positions: []int{2, 5, 11, 20},
+				},
+			},
+			res: []Posting{
+				{
+					DocID:     10,
+					Positions: []int{5, 11},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := NewQuerier(nil).(*querier)
+			res := q.phrase(tt.a, tt.b)
+			require.Equal(t, tt.res, res)
+		})
+	}
+}
