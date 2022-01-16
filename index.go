@@ -65,6 +65,9 @@ next:
 		if err != nil {
 			return "", fmt.Errorf("next token: %w", err)
 		}
+		if t == "" {
+			break
+		}
 
 		if _, ok := idx.dict[t]; !ok {
 			idx.dict[t] = []Posting{}
