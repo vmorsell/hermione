@@ -45,25 +45,22 @@ func TestHasDocID(t *testing.T) {
 
 func TestIndexDocument(t *testing.T) {
 	tests := []struct {
-		name         string
-		dict         map[string][]Posting
-		docIDCounter int
-		idFn         func() int
-		r            io.Reader
-		wantDict     map[string][]Posting
-		err          error
+		name     string
+		dict     map[string][]Posting
+		r        io.Reader
+		wantDict map[string][]Posting
+		err      error
 	}{
 		{
 			name: "ok - first document in index",
 			dict: map[string][]Posting{},
-			idFn: func() int { return 0 },
 			r:    strings.NewReader("Hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
 					{DocID: 0, Freq: 1},
 				},
 				"world": {
-					{DocID: 1, Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 			},
 		},
@@ -72,8 +69,7 @@ func TestIndexDocument(t *testing.T) {
 			dict: map[string][]Posting{
 				"hello": {{DocID: 0, Freq: 1}},
 			},
-			idFn: func() int { return 1 },
-			r:    strings.NewReader("Hello, world!"),
+			r: strings.NewReader("Hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
 					{DocID: 0, Freq: 1},
@@ -90,7 +86,7 @@ func TestIndexDocument(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := NewIndex().(*index)
 			idx.dict = tt.dict
-			idx.idFn = tt.idFn
+			idx.nextID = len(tt.dict)
 
 			idx.IndexDocument(tt.r)
 			require.EqualValues(t, tt.wantDict, idx.dict)

@@ -13,8 +13,6 @@ type Index interface {
 type index struct {
 	dict   map[string][]Posting
 	nextID int
-
-	idFn func() int
 }
 
 func NewIndex() Index {
@@ -88,10 +86,6 @@ func (idx *index) Postings(token string) ([]Posting, error) {
 }
 
 func (idx *index) id() int {
-	if idx.idFn != nil {
-		return idx.idFn()
-	}
-
 	id := idx.nextID
 	idx.nextID++
 	return id
