@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Querier interface {
-	Boolean(query string) ([]Posting, error)
-	Intersect(tokens ...string) ([]Posting, error)
+	Intersection(tokens ...string) ([]Posting, error)
 }
 
 type querier struct {
 	idx Index
 
-	intersectFn func(a, b []Posting) []Posting
+	intersectionFn func(a, b []Posting) []Posting
 }
 
 func NewQuerier(idx Index) Querier {
@@ -21,20 +19,13 @@ func NewQuerier(idx Index) Querier {
 		idx: idx,
 
 		// Use the default functions
-		intersectFn: intersect,
+		intersectionFn: intersection,
 	}
 }
 
-// Boolean takes a query expression and returns matching documents using
-// boolean retrieval.
-func (q *querier) Boolean(query string) ([]Posting, error) {
-	tokens := strings.Split(query, " ")
-	return q.Intersect(tokens...)
-}
-
-// Intersect fetches the postings lists for all given terms and returns the
+// Intersection fetches the postings lists for all given terms and returns the
 // document ID's present in all lists.
-func (q *querier) Intersect(tokens ...string) ([]Posting, error) {
+func (q *querier) Intersection(tokens ...string) ([]Posting, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("no tokens provided")
 	}
@@ -63,13 +54,13 @@ func (q *querier) Intersect(tokens ...string) ([]Posting, error) {
 			continue
 		}
 
-		res = q.intersectFn(res, l)
+		res = q.intersectionFn(res, l)
 	}
 	return res, nil
 }
 
-// intersect returns the common document ID's from the two given postings lists.
-func intersect(a, b []Posting) []Posting {
+// intersection returns the common document ID's from the two given postings lists.
+func intersection(a, b []Posting) []Posting {
 	if len(a) == 0 {
 		return nil
 	}

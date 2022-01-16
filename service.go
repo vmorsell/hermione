@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type Service interface {
@@ -29,7 +30,7 @@ func NewService(idx Index, querier Querier, store Store) Service {
 }
 
 func (s *service) Start() error {
-	http.HandleFunc("/search/boolean", s.handleBooleanSearch)
+	http.HandleFunc("/search/intersection", s.handleIntersectionSearch)
 	http.HandleFunc("/doc", s.handleDoc)
 
 	http.HandleFunc("/debug/postings", s.handleDebugPostings)
@@ -47,9 +48,9 @@ type GetResponseBody struct {
 	Documents []Document
 }
 
-// handleBooleanSearch takes a search query and returns the matching documents
-// using boolean retrieval.
-func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) {
+// handleIntersectionSearch takes a search query and returns the matching documents
+// using intersect.
+func (s *service) handleIntersectionSearch(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "GET" {
 		log.Printf("unsupported http method: %s", req.Method)
 		http.Error(w, "", http.StatusMethodNotAllowed)
@@ -62,9 +63,10 @@ func (s *service) handleBooleanSearch(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "", http.StatusBadRequest)
 	}
 
-	postings, err := s.querier.Boolean(query)
+	tokens := strings.Split(query, " ")
+	postings, err := s.querier.Intersection(tokens...)
 	if err != nil {
-		log.Printf("boolean: %v", err)
+		log.Printf("intersection: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
