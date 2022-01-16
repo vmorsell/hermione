@@ -25,14 +25,12 @@ func main() {
 			if info.IsDir() {
 				return nil
 			}
+			log.Printf("%s", path)
 			if err := ingestFile(path); err != nil {
 				return fmt.Errorf("ingest file: %w", err)
 			}
 
 			n++
-			if n%100 == 0 {
-				log.Printf("%d files done...", n)
-			}
 
 			return nil
 		})

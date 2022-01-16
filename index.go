@@ -3,67 +3,58 @@ package main
 import (
 	"fmt"
 	"io"
-	"time"
-
-	"github.com/segmentio/ksuid"
 )
 
 type Index interface {
-	IndexDocument(r io.Reader) (string, error)
+	IndexDocument(r io.Reader) (int, error)
 	Postings(token string) ([]Posting, error)
 }
 
 type index struct {
-	dict map[string][]Posting
-
-	idFn func() (string, error)
+	dict   map[string][]Posting
+	nextID int
 }
 
 func NewIndex() Index {
 	return &index{
-		dict: make(map[string][]Posting),
-
-		// use default functions
-		idFn: id,
+		dict:   make(map[string][]Posting),
+		nextID: 0,
 	}
 }
 
 // hasDocID searches for a document ID in the postings list, and returns the index if it's found.
-func hasDocID(postingsList []Posting, id string) (bool, int) {
-	if len(postingsList) == 0 {
-		return false, 0
-	}
-
+func hasDocID(postingsList []Posting, id int) (bool, int) {
 	for i, p := range postingsList {
-		if p.DocID > id {
-			return false, 0
+		if p.DocID < id {
+			continue
 		}
 		if p.DocID == id {
 			return true, i
 		}
+		return false, 0
 	}
 	return false, 0
 }
 
 type Posting struct {
-	DocID string
+	DocID int
 	Freq  int
 }
 
 // IndexDocument tokenizes the document from the reader and adds the tokens to
 // the index. It returns the ID of the new document.
-func (idx *index) IndexDocument(r io.Reader) (string, error) {
-	id, err := idx.idFn()
-	if err != nil {
-		return "", fmt.Errorf("id: %w", err)
-	}
-
+func (idx *index) IndexDocument(r io.Reader) (int, error) {
+	id := idx.id()
 	tokenizer := NewTokenizer(r)
+
 next:
 	for tokenizer.HasMoreTokens() {
 		t, err := tokenizer.NextToken()
 		if err != nil {
-			return "", fmt.Errorf("next token: %w", err)
+			return 0, fmt.Errorf("next token: %w", err)
+		}
+		if t == "" {
+			break
 		}
 
 		if _, ok := idx.dict[t]; !ok {
@@ -94,12 +85,10 @@ func (idx *index) Postings(token string) ([]Posting, error) {
 	return idx.dict[token], nil
 }
 
-func id() (string, error) {
-	id, err := ksuid.NewRandomWithTime(time.Now())
-	if err != nil {
-		return "", fmt.Errorf("new random with time: %w", err)
-	}
-	return id.String(), nil
+func (idx *index) id() int {
+	id := idx.nextID
+	idx.nextID++
+	return id
 }
 
 func max(n ...int) int {

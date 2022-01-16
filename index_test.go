@@ -8,44 +8,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIndexDocument(t *testing.T) {
+func TestHasDocID(t *testing.T) {
 	tests := []struct {
 		name         string
-		dict         map[string][]Posting
-		docIDCounter int
-		idFn         func() (string, error)
-		r            io.Reader
-		wantDict     map[string][]Posting
-		err          error
+		postingsList []Posting
+		id           int
+		found        bool
+		index        int
+	}{
+		{
+			name: "found",
+			postingsList: []Posting{
+				{DocID: 0, Freq: 1},
+			},
+			id:    0,
+			found: true,
+			index: 0,
+		},
+		{
+			name: "not found",
+			postingsList: []Posting{
+				{DocID: 0, Freq: 1},
+			},
+			id: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			found, index := hasDocID(tt.postingsList, tt.id)
+			require.Equal(t, tt.found, found)
+			require.Equal(t, tt.index, index)
+		})
+	}
+}
+
+func TestIndexDocument(t *testing.T) {
+	tests := []struct {
+		name     string
+		dict     map[string][]Posting
+		r        io.Reader
+		wantDict map[string][]Posting
+		err      error
 	}{
 		{
 			name: "ok - first document in index",
 			dict: map[string][]Posting{},
-			idFn: func() (string, error) { return "doc1", nil },
 			r:    strings.NewReader("Hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
-					{DocID: "doc1", Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 				"world": {
-					{DocID: "doc1", Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 			},
 		},
 		{
 			name: "ok - second document in index",
 			dict: map[string][]Posting{
-				"hello": {{DocID: "doc1", Freq: 1}},
+				"hello": {{DocID: 0, Freq: 1}},
 			},
-			idFn: func() (string, error) { return "doc2", nil },
-			r:    strings.NewReader("Hello, world!"),
+			r: strings.NewReader("Hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
-					{DocID: "doc1", Freq: 1},
-					{DocID: "doc2", Freq: 1},
+					{DocID: 0, Freq: 1},
+					{DocID: 1, Freq: 1},
 				},
 				"world": {
-					{DocID: "doc2", Freq: 1},
+					{DocID: 1, Freq: 1},
 				},
 			},
 		},
@@ -55,7 +86,7 @@ func TestIndexDocument(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			idx := NewIndex().(*index)
 			idx.dict = tt.dict
-			idx.idFn = tt.idFn
+			idx.nextID = len(tt.dict)
 
 			idx.IndexDocument(tt.r)
 			require.EqualValues(t, tt.wantDict, idx.dict)
@@ -75,7 +106,7 @@ func TestGetPostingsList(t *testing.T) {
 			name: "not ok, token not found in dict",
 			dict: map[string][]Posting{
 				"hello": {
-					{DocID: "doc1", Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 			},
 			token: "world",
@@ -85,12 +116,12 @@ func TestGetPostingsList(t *testing.T) {
 			name: "ok",
 			dict: map[string][]Posting{
 				"hello": {
-					{DocID: "doc1", Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 			},
 			token: "hello",
 			res: []Posting{
-				{DocID: "doc1", Freq: 1},
+				{DocID: 0, Freq: 1},
 			},
 		},
 	}
@@ -104,6 +135,15 @@ func TestGetPostingsList(t *testing.T) {
 			require.Equal(t, tt.err, err)
 			require.Equal(t, tt.res, res)
 		})
+	}
+}
+
+func TestID(t *testing.T) {
+	index := NewIndex().(*index)
+
+	for want := 0; want < 3; want++ {
+		id := index.id()
+		require.Equal(t, want, id)
 	}
 }
 

@@ -38,7 +38,7 @@ func (s *service) Start() error {
 }
 
 type Document struct {
-	ID     string
+	ID     int
 	Source string
 }
 

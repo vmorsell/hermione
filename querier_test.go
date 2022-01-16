@@ -27,7 +27,7 @@ func TestIntersect(t *testing.T) {
 			name: "not ok - token not found",
 			dict: map[string][]Posting{
 				"x": {
-					{DocID: "doc1", Freq: 1},
+					{DocID: 0, Freq: 1},
 				},
 			},
 			tokens: []string{"x", "y"},
@@ -37,24 +37,24 @@ func TestIntersect(t *testing.T) {
 			name: "ok - two tokens",
 			dict: map[string][]Posting{
 				"x": {
-					{DocID: "doc1", Freq: 1},
-					{DocID: "doc2", Freq: 1},
-					{DocID: "doc3", Freq: 1},
+					{DocID: 0, Freq: 1},
+					{DocID: 1, Freq: 1},
+					{DocID: 2, Freq: 1},
 				},
 				"y": {
-					{DocID: "doc2", Freq: 1},
+					{DocID: 1, Freq: 1},
 				},
 			},
 			tokens: []string{"x", "y"},
 			calls: []intersectCall{
 				{
 					a: []Posting{
-						{DocID: "doc2", Freq: 1},
+						{DocID: 1, Freq: 1},
 					},
 					b: []Posting{
-						{DocID: "doc1", Freq: 1},
-						{DocID: "doc2", Freq: 1},
-						{DocID: "doc3", Freq: 1},
+						{DocID: 0, Freq: 1},
+						{DocID: 1, Freq: 1},
+						{DocID: 2, Freq: 1},
 					},
 				},
 			},
@@ -63,37 +63,37 @@ func TestIntersect(t *testing.T) {
 			name: "ok - three tokens",
 			dict: map[string][]Posting{
 				"x": {
-					{DocID: "doc1", Freq: 1},
-					{DocID: "doc2", Freq: 1},
-					{DocID: "doc3", Freq: 1},
+					{DocID: 0, Freq: 1},
+					{DocID: 1, Freq: 1},
+					{DocID: 2, Freq: 1},
 				},
 				"y": {
-					{DocID: "doc2", Freq: 1},
+					{DocID: 1, Freq: 1},
 				},
 				"z": {
-					{DocID: "doc2", Freq: 1},
-					{DocID: "doc4", Freq: 1},
+					{DocID: 1, Freq: 1},
+					{DocID: 3, Freq: 1},
 				},
 			},
 			tokens: []string{"x", "y", "z"},
 			calls: []intersectCall{
 				{
 					a: []Posting{
-						{DocID: "doc2", Freq: 1}, // We expect it to start with the shortest list as 'a' param.
+						{DocID: 1, Freq: 1}, // We expect it to start with the shortest list as 'a' param.
 					},
 					b: []Posting{
-						{DocID: "doc1", Freq: 1},
-						{DocID: "doc2", Freq: 1},
-						{DocID: "doc3", Freq: 1},
+						{DocID: 0, Freq: 1},
+						{DocID: 1, Freq: 1},
+						{DocID: 2, Freq: 1},
 					},
 				},
 				{
 					a: []Posting{
-						{DocID: "doc2", Freq: 1},
+						{DocID: 1, Freq: 1},
 					},
 					b: []Posting{
-						{DocID: "doc2", Freq: 1},
-						{DocID: "doc4", Freq: 1},
+						{DocID: 1, Freq: 1},
+						{DocID: 3, Freq: 1},
 					},
 				},
 			},
@@ -130,20 +130,20 @@ func TestPrivateIntersect(t *testing.T) {
 		{
 			name: "a postings list empty",
 			a:    nil,
-			b:    []Posting{{DocID: "doc1", Freq: 1}},
+			b:    []Posting{{DocID: 0, Freq: 1}},
 			res:  nil,
 		},
 		{
 			name: "b postings list empty",
-			a:    []Posting{{DocID: "doc1", Freq: 1}},
+			a:    []Posting{{DocID: 0, Freq: 1}},
 			b:    nil,
 			res:  nil,
 		},
 		{
 			name: "ok",
-			a:    []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc2", Freq: 1}, {DocID: "doc3", Freq: 1}},
-			b:    []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc3", Freq: 1}, {DocID: "doc5", Freq: 1}},
-			res:  []Posting{{DocID: "doc1", Freq: 1}, {DocID: "doc3", Freq: 1}},
+			a:    []Posting{{DocID: 0, Freq: 1}, {DocID: 1, Freq: 1}, {DocID: 2, Freq: 1}},
+			b:    []Posting{{DocID: 0, Freq: 1}, {DocID: 2, Freq: 1}, {DocID: 4, Freq: 1}},
+			res:  []Posting{{DocID: 0, Freq: 1}, {DocID: 2, Freq: 1}},
 		},
 	}
 

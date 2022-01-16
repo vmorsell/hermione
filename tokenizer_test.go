@@ -50,28 +50,131 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-func TestHasMoreTokens(t *testing.T) {
+func TestHasMoreWords(t *testing.T) {
 	tests := []struct {
 		name string
-		r    io.Reader
+		r    *strings.Reader
 		res  bool
 	}{
 		{
-			name: "no",
+			name: "empty reader",
 			r:    strings.NewReader(""),
 			res:  false,
 		},
 		{
-			name: "yes",
-			r:    strings.NewReader("a"),
+			name: "non-empty reader",
+			r:    strings.NewReader("x"),
 			res:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewTokenizer(tt.r)
-			res := s.HasMoreTokens()
+			tokenizer := NewTokenizer(tt.r)
+			res := tokenizer.HasMoreTokens()
+			require.Equal(t, tt.res, res)
+		})
+	}
+}
+
+func TestNextWord(t *testing.T) {
+	tests := []struct {
+		name string
+		r    *strings.Reader
+		res  []byte
+		err  error
+	}{
+		{
+			name: "ok - token right away",
+			r:    strings.NewReader("next word"),
+			res:  []byte("next"),
+		},
+		{
+			name: "ok - stop characters before token",
+			r:    strings.NewReader("  \n next word"),
+			res:  []byte("next"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenizer := NewTokenizer(tt.r)
+			res, err := tokenizer.NextWord()
+			require.Equal(t, tt.err, err)
+			require.Equal(t, tt.res, res)
+		})
+	}
+
+}
+
+func TestHasMoreTokens(t *testing.T) {
+	tests := []struct {
+		name  string
+		r     *strings.Reader
+		queue [][]byte
+		res   bool
+	}{
+		{
+			name: "non-empty reader",
+			r:    strings.NewReader("x"),
+			res:  true,
+		},
+		{
+			name: "non-empty queue",
+			r:    strings.NewReader(""),
+			queue: [][]byte{
+				[]byte("x"),
+			},
+			res: true,
+		},
+		{
+			name: "reader and queue empty",
+			r:    strings.NewReader(""),
+			res:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenizer := NewTokenizer(tt.r).(*tokenizer)
+			if tt.queue != nil {
+				tokenizer.queue = tt.queue
+			}
+			res := tokenizer.HasMoreTokens()
+			require.Equal(t, tt.res, res)
+		})
+	}
+}
+
+func TestNextToken(t *testing.T) {
+	tests := []struct {
+		name  string
+		r     *strings.Reader
+		queue [][]byte
+		res   string
+		err   error
+	}{
+		{
+			name:  "token from queue",
+			r:     strings.NewReader(""),
+			queue: [][]byte{[]byte("x")},
+			res:   "x",
+		},
+		{
+			name: "token from reader",
+			r:    strings.NewReader("x"),
+			res:  "x",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokenizer := NewTokenizer(tt.r).(*tokenizer)
+			if tt.queue != nil {
+				tokenizer.queue = tt.queue
+			}
+			res, err := tokenizer.NextToken()
+			require.Equal(t, tt.err, err)
 			require.Equal(t, tt.res, res)
 		})
 	}
@@ -105,11 +208,13 @@ func TestTokenizeCorpus(t *testing.T) {
 	for s.HasMoreTokens() {
 		token, err := s.NextToken()
 		require.Nil(t, err)
-		_, ok := got[token]
-		if !ok {
-			got[token] = 1
-		} else {
-			got[token] += 1
+		if token != "" {
+			_, ok := got[token]
+			if !ok {
+				got[token] = 1
+			} else {
+				got[token] += 1
+			}
 		}
 	}
 
