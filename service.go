@@ -40,13 +40,13 @@ func (s *service) Start() error {
 }
 
 type Document struct {
-	ID     int
-	Source string
+	ID     int    `json:"id"`
+	Source string `json:"source"`
 }
 
 type GetResponseBody struct {
-	Hits      int
-	Documents []Document
+	Hits      int        `json:"hits"`
+	Documents []Document `json:"documents"`
 }
 
 // handleIntersectionSearch takes a search query and returns the matching documents
