@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Querier interface {
 	Intersection(tokens ...string) ([]Posting, error)
+	Phrase(phrase string) ([]Posting, error)
 }
 
 type querier struct {
@@ -84,7 +86,10 @@ func intersection(a, b []Posting) []Posting {
 			if bf < f {
 				f = bf
 			}
-			res = append(res, Posting{a[aCur].DocID, f})
+			res = append(res, Posting{
+				DocID: a[aCur].DocID,
+				Freq:  f,
+			})
 			aCur++
 			bCur++
 			continue
@@ -95,6 +100,79 @@ func intersection(a, b []Posting) []Posting {
 		} else {
 			aCur++
 		}
+	}
+	return res
+}
+
+// Phrase search for an exact phrase and returns all matching documents.
+func (q *querier) Phrase(phrase string) ([]Posting, error) {
+	tokens := strings.Split(phrase, " ")
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+
+	res, err := q.idx.Postings(tokens[0])
+	if err != nil {
+		return nil, fmt.Errorf("first postings: %w", err)
+	}
+
+	for _, t := range tokens[1:] {
+		postingsList, err := q.idx.Postings(t)
+		if err != nil {
+			return nil, fmt.Errorf("postings: %w", err)
+		}
+		res = q.phrase(res, postingsList)
+	}
+
+	return res, nil
+}
+
+func (q *querier) phrase(a, b []Posting) []Posting {
+	if len(a) == 0 {
+		return nil
+	}
+	if len(b) == 0 {
+		return nil
+	}
+
+	var res []Posting
+
+	i := 0
+	j := 0
+
+	for i <= len(a)-1 && j <= len(b)-1 {
+		if a[i].DocID > b[j].DocID {
+			j++
+			continue
+		}
+		if a[i].DocID < b[j].DocID {
+			i++
+			continue
+		}
+
+		var positions []int
+		for _, ap := range a[i].Positions {
+			for _, bp := range b[j].Positions {
+				if ap+1 == bp {
+					positions = append(positions, bp)
+				}
+			}
+
+		}
+		if len(positions) != 0 {
+			f := a[i].Freq
+			bf := b[j].Freq
+			if bf < f {
+				f = bf
+			}
+			res = append(res, Posting{
+				DocID:     a[i].DocID,
+				Freq:      f,
+				Positions: positions,
+			})
+		}
+		i++
+		j++
 	}
 	return res
 }
