@@ -9,8 +9,8 @@ import (
 )
 
 type Store interface {
-	Get(id string) ([]byte, error)
-	PutFromStream(r io.Reader, id string) error
+	Get(id int) ([]byte, error)
+	PutFromStream(r io.Reader, id int) error
 }
 
 type store struct {
@@ -33,8 +33,8 @@ func NewStore(root string) (Store, error) {
 	}, nil
 }
 
-func (s *store) Get(id string) ([]byte, error) {
-	file, err := os.Open(fmt.Sprintf("%s/%s", s.root, id))
+func (s *store) Get(id int) ([]byte, error) {
+	file, err := os.Open(fmt.Sprintf("%s/%d", s.root, id))
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}
@@ -48,14 +48,14 @@ func (s *store) Get(id string) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s *store) PutFromStream(r io.Reader, id string) error {
-	log.Printf("id: %s\n", id)
+func (s *store) PutFromStream(r io.Reader, id int) error {
+	log.Printf("id: %d\n", id)
 	bytes, err := ioutil.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("read all: %w", err)
 	}
 
-	file, err := os.Create(fmt.Sprintf("%s/%s", s.root, id))
+	file, err := os.Create(fmt.Sprintf("%s/%d", s.root, id))
 	if err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
