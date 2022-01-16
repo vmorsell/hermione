@@ -54,29 +54,55 @@ func TestIndexDocument(t *testing.T) {
 		{
 			name: "ok - first document in index",
 			dict: map[string][]Posting{},
-			r:    strings.NewReader("Hello, world!"),
+			r:    strings.NewReader("Hello hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
-					{DocID: 0, Freq: 1},
+					{
+						DocID:     0,
+						Freq:      2,
+						Positions: []int{0, 1},
+					},
 				},
 				"world": {
-					{DocID: 0, Freq: 1},
+					{
+						DocID:     0,
+						Freq:      1,
+						Positions: []int{2},
+					},
 				},
 			},
 		},
 		{
 			name: "ok - second document in index",
 			dict: map[string][]Posting{
-				"hello": {{DocID: 0, Freq: 1}},
+				"hello": {
+					{
+						DocID:     0,
+						Freq:      1,
+						Positions: []int{0},
+					},
+				},
 			},
-			r: strings.NewReader("Hello, world!"),
+			r: strings.NewReader("Hello hello, world!"),
 			wantDict: map[string][]Posting{
 				"hello": {
-					{DocID: 0, Freq: 1},
-					{DocID: 1, Freq: 1},
+					{
+						DocID:     0,
+						Freq:      1,
+						Positions: []int{0},
+					},
+					{
+						DocID:     1,
+						Freq:      2,
+						Positions: []int{0, 1},
+					},
 				},
 				"world": {
-					{DocID: 1, Freq: 1},
+					{
+						DocID:     1,
+						Freq:      1,
+						Positions: []int{2},
+					},
 				},
 			},
 		},

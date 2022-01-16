@@ -37,8 +37,9 @@ func hasDocID(postingsList []Posting, id int) (bool, int) {
 }
 
 type Posting struct {
-	DocID int
-	Freq  int
+	DocID     int
+	Freq      int
+	Positions []int
 }
 
 // IndexDocument tokenizes the document from the reader and adds the tokens to
@@ -46,8 +47,8 @@ type Posting struct {
 func (idx *index) IndexDocument(r io.Reader) (int, error) {
 	id := idx.id()
 	tokenizer := NewTokenizer(r)
+	position := 0
 
-next:
 	for tokenizer.HasMoreTokens() {
 		t, err := tokenizer.NextToken()
 		if err != nil {
@@ -61,16 +62,20 @@ next:
 			idx.dict[t] = []Posting{}
 		}
 
+		var posting *Posting
 		found, i := hasDocID(idx.dict[t], id)
 		if found {
-			idx.dict[t][i].Freq++
-			continue next
+			posting = &idx.dict[t][i]
+		} else {
+			idx.dict[t] = append(idx.dict[t], Posting{
+				DocID: id,
+			})
+			posting = &idx.dict[t][len(idx.dict[t])-1]
 		}
 
-		idx.dict[t] = append(idx.dict[t], Posting{
-			DocID: id,
-			Freq:  1,
-		})
+		posting.Freq++
+		posting.Positions = append(posting.Positions, position)
+		position++
 	}
 	return id, nil
 }

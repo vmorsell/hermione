@@ -31,6 +31,7 @@ func NewService(idx Index, querier Querier, store Store) Service {
 
 func (s *service) Start() error {
 	http.HandleFunc("/search/intersection", s.handleIntersectionSearch)
+	http.HandleFunc("/search/phrase", s.handlePhraseSearch)
 	http.HandleFunc("/doc", s.handleDoc)
 
 	http.HandleFunc("/debug/postings", s.handleDebugPostings)
@@ -67,6 +68,54 @@ func (s *service) handleIntersectionSearch(w http.ResponseWriter, req *http.Requ
 	postings, err := s.querier.Intersection(tokens...)
 	if err != nil {
 		log.Printf("intersection: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	var docs []Document
+	for _, p := range postings {
+		source, err := s.store.Get(p.DocID)
+		if err != nil {
+			log.Printf("get: %v", err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		docs = append(docs, Document{
+			ID:     p.DocID,
+			Source: string(source),
+		})
+	}
+
+	jsonResp, err := json.Marshal(GetResponseBody{
+		Hits:      len(docs),
+		Documents: docs,
+	})
+	if err != nil {
+		log.Printf("marshal: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(jsonResp)
+}
+
+// handlePhraseSearch search for an exact phrase and returns the matching documents.
+func (s *service) handlePhraseSearch(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		log.Printf("unsupported http method: %s", req.Method)
+		http.Error(w, "", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := req.URL.Query().Get("query")
+	if len(query) == 0 {
+		log.Printf("no query provided")
+		http.Error(w, "", http.StatusBadRequest)
+	}
+
+	postings, err := s.querier.Phrase(query)
+	if err != nil {
+		log.Printf("phrase: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
