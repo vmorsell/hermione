@@ -29,14 +29,16 @@ var patterns = []string{
 }
 
 type Tokenizer interface {
-	NextToken() (string, error)
+	HasMoreWords() bool
+	NextWord() ([]byte, error)
 	HasMoreTokens() bool
+	NextToken() (string, error)
 }
 
 type tokenizer struct {
-	r          *bufio.Reader
-	tokenQueue []string
-	patterns   []regexp.Regexp
+	r        *bufio.Reader
+	queue    [][]byte
+	patterns []regexp.Regexp
 }
 
 func NewTokenizer(reader io.Reader) Tokenizer {
@@ -46,32 +48,18 @@ func NewTokenizer(reader io.Reader) Tokenizer {
 	}
 }
 
-// NextToken reads the next token from the reader and returns it as a string.
-func (t *tokenizer) NextToken() (string, error) {
-	for len(t.tokenQueue) == 0 {
-		word, err := t.ReadNextWord()
-		if err != nil {
-			return "", fmt.Errorf("read next word: %w", err)
+// HasMoreWords returns if the reader had unread words.
+func (t *tokenizer) HasMoreWords() bool {
+	if _, err := t.r.Peek(1); err != nil {
+		if err == io.EOF {
+			return false
 		}
-
-		tokens, err := t.TokensFromWord(word)
-		if err != nil {
-			return "", fmt.Errorf("tokens from word: %w", err)
-		}
-
-		t.tokenQueue = append(t.tokenQueue, tokens...)
 	}
-
-	next := t.tokenQueue[0]
-	if len(t.tokenQueue) > 1 {
-		t.tokenQueue = t.tokenQueue[1:]
-	} else {
-		t.tokenQueue = nil
-	}
-	return next, nil
+	return true
 }
 
-func (t *tokenizer) ReadNextWord() (string, error) {
+// NextWord returns the next available word from the reader.
+func (t *tokenizer) NextWord() ([]byte, error) {
 	var out bytes.Buffer
 
 readByte:
@@ -79,40 +67,92 @@ readByte:
 		b, err := t.r.ReadByte()
 		if err != nil {
 			if err == io.EOF {
-				// End word at EOF.
 				break
 			}
-			return "", fmt.Errorf("read byte: %w", err)
+			return nil, fmt.Errorf("read byte: %w", err)
 		}
-
 		for _, s := range stopBytes {
 			if s == b {
 				break readByte
 			}
 		}
-
 		c := bytes.ToLower([]byte{b})[0]
 		out.WriteByte(c)
 	}
 
-	return out.String(), nil
-}
-
-func (t *tokenizer) TokensFromWord(w string) ([]string, error) {
-	var out []string
-	for _, p := range t.patterns {
-		if tokens := p.FindAllString(w, -1); tokens != nil {
-			out = append(out, tokens...)
-			w = p.ReplaceAllString(w, "")
+	if out.Len() == 0 {
+		if !t.HasMoreWords() {
+			return nil, nil
 		}
+		out.Reset()
+		goto readByte
 	}
-	return out, nil
+
+	return out.Bytes(), nil
 }
 
-// HasMoreTokens returns if there are more tokens to read.
 func (t *tokenizer) HasMoreTokens() bool {
-	_, err := t.r.Peek(1)
-	return err == nil
+	if len(t.queue) != 0 {
+		return true
+	}
+	if t.HasMoreWords() {
+		return true
+	}
+	return false
+}
+
+// NextToken returns the next token.
+func (t *tokenizer) NextToken() (string, error) {
+	for t.HasMoreTokens() {
+		// Make sure we have words in the queue.
+		for len(t.queue) == 0 && t.HasMoreWords() {
+			word, err := t.NextWord()
+			if err != nil {
+				return "", fmt.Errorf("read next word: %w", err)
+			}
+			t.queue = append(t.queue, word)
+		}
+
+		// Return if the queue is empty.
+		if len(t.queue) == 0 {
+			return "", nil
+		}
+
+		word := t.queue[0]
+		t.queue = t.queue[1:]
+
+		token, err := t.TokenFromWord(word)
+		if err != nil {
+			return "", fmt.Errorf("token from word: %w", err)
+		}
+		if token == nil {
+			continue
+		}
+		return string(token), nil
+	}
+
+	return "", nil
+}
+
+func (t *tokenizer) TokenFromWord(w []byte) ([]byte, error) {
+	for _, p := range t.patterns {
+		loc := p.FindIndex(w)
+		if loc == nil {
+			continue
+		}
+
+		token := w[loc[0]:loc[1]]
+
+		if before := w[:loc[0]]; len(before) != 0 {
+			t.queue = append(t.queue, before)
+		}
+		if after := w[loc[1]:]; len(after) != 0 {
+			t.queue = append(t.queue, after)
+		}
+
+		return token, nil
+	}
+	return nil, nil
 }
 
 // TokenPatterns returns regexps for all allowed complex token patterns.
